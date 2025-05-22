@@ -16,12 +16,14 @@
         function getLocation() {
             const statusDiv = document.getElementById("statusMessage");
             statusDiv.textContent = ""; // Clear previous messages
+            // Clear existing color classes for geolocation message
+            statusDiv.classList.remove('text-green-600', 'text-red-600');
+
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(showPosition, showError);
             } else {
                 statusDiv.textContent = "Geolocation is not supported by this browser.";
-                statusDiv.classList.remove('text-green-600');
                 statusDiv.classList.add('text-red-600');
             }
         }
@@ -34,7 +36,7 @@
 
             const statusDiv = document.getElementById("statusMessage");
             statusDiv.textContent = "Location retrieved successfully!";
-            statusDiv.classList.remove('text-red-600');
+            statusDiv.classList.remove('text-red-600'); // Ensure red is removed
             statusDiv.classList.add('text-green-600');
         }
 
@@ -56,7 +58,7 @@
                     break;
             }
             statusDiv.textContent = message;
-            statusDiv.classList.remove('text-green-600');
+            statusDiv.classList.remove('text-green-600'); // Ensure green is removed
             statusDiv.classList.add('text-red-600');
         }
 
@@ -68,37 +70,45 @@
             const statusDiv = document.getElementById("formResponse");
             const submitButton = form.querySelector('button[type="submit"]');
 
+            // Prepare statusDiv for new message
+            statusDiv.classList.remove('hidden', 'text-green-600', 'text-red-600');
+            statusDiv.classList.add('text-blue-600');
             statusDiv.textContent = "Submitting...";
-            statusDiv.className = 'mt-2 text-sm text-blue-600'; // Reset classes
+            
             submitButton.disabled = true;
 
             try {
-                // IMPORTANT: Replace with your ACTUAL Google Apps Script Web App URL
                 const response = await fetch(form.action, {
                     method: 'POST',
                     body: formData
                 });
-
-                // Google Apps Script usually returns JSON.
-                // If it's not JSON or if it's a redirect, this might need adjustment.
                 const result = await response.json();
 
                 if (result.result === 'success') {
-                    // CORRECTED LINE: Added backticks
+                    statusDiv.classList.remove('text-blue-600', 'text-red-600');
+                    statusDiv.classList.add('text-green-600');
                     statusDiv.textContent = `Data submitted successfully! (Row: ${result.row})`;
-                    statusDiv.className = 'mt-2 text-sm text-green-600';
-                    form.reset(); // Optionally reset the form
+                    form.reset(); 
                     document.getElementById("statusMessage").textContent = ""; // Clear location status
-                } else {
-                    // CORRECTED LINE: Added backticks
+                    document.getElementById("statusMessage").classList.remove('text-green-600', 'text-red-600');
+
+
+                    // Hide success message after 3 seconds
+                    setTimeout(() => {
+                        statusDiv.textContent = ""; 
+                        statusDiv.classList.add('hidden');
+                        statusDiv.classList.remove('text-green-600'); 
+                    }, 3000);
+                } else { // Submission failed (error from script)
+                    statusDiv.classList.remove('text-blue-600', 'text-green-600');
+                    statusDiv.classList.add('text-red-600');
                     statusDiv.textContent = `Submission failed: ${result.error || 'Unknown error'}. Check script logs.`;
-                    statusDiv.className = 'mt-2 text-sm text-red-600';
                     console.error('Submission error details:', result);
                 }
-            } catch (error) {
-                // CORRECTED LINE: Added backticks
+            } catch (error) { // Fetch or other JS error
+                statusDiv.classList.remove('hidden', 'text-blue-600', 'text-green-600'); // Ensure visible
+                statusDiv.classList.add('text-red-600');
                 statusDiv.textContent = `Submission error: ${error.message}. Is the script URL correct and CORS configured if needed?`;
-                statusDiv.className = 'mt-2 text-sm text-red-600';
                 console.error('Fetch error:', error);
             } finally {
                 submitButton.disabled = false;
@@ -110,16 +120,6 @@
     <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
         <h1 class="text-2xl font-bold mb-6 text-center text-gray-700">Submit Your Information</h1>
 
-        <!--
-            TROUBLESHOOTING CHECKLIST:
-            1. SCRIPT URL: Is the 'action' URL below THE EXACT URL from your *latest* Google Apps Script web app deployment?
-               To get this URL: In Apps Script Editor -> Deploy -> Manage deployments -> Select your active deployment -> Copy the "Web app" URL.
-            2. SCRIPT PERMISSIONS: In "Manage deployments", ensure "Who has access" is set to "Anyone" (or "Anyone, even anonymous") for public access.
-            3. `initialSetup()`: Did you run the `initialSetup` function ONCE manually from the Apps Script editor?
-            4. SHEET NAME: Does your Google Sheet have a sheet named EXACTLY 'Form1' (case-sensitive)?
-            5. SHEET HEADERS: Does the FIRST ROW of 'Form1' contain these headers: Date, Email, Name, Description, Latitude, Longitude ?
-               (The order of Email, Name, etc. after Date doesn't strictly matter, but they must match the 'name' attributes below).
-        -->
         <form
             action="https://script.google.com/macros/s/AKfycbxfC51eb4XyGR_PUn4Y0rYy2H7AQpVcG2krxKsBx6k_C8hp0B3kCrKyDDcGdJA5nput/exec" method="POST"
             class="space-y-4"
@@ -166,27 +166,8 @@
                     class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 Send Data
             </button>
-            <div id="formResponse" class="mt-2 text-sm"></div>
+            <div id="formResponse" class="mt-2 text-sm hidden"></div> 
         </form>
     </div>
 </body>
 </html>
-```
-
-**Key Changes:**
-
-I've wrapped the relevant `statusDiv.textContent` assignments in backticks:
-
-* `statusDiv.textContent = \`Data submitted successfully! (Row: ${result.row})\`;`
-* `statusDiv.textContent = \`Submission failed: ${result.error || 'Unknown error'}. Check script logs.\`;`
-* `statusDiv.textContent = \`Submission error: ${error.message}. Is the script URL correct and CORS configured if needed?\`;`
-
-**Next Steps:**
-
-1.  **Update your HTML file on GitHub** with this corrected code.
-2.  **Commit and push** the changes to your GitHub repository.
-3.  **Wait a minute or two** for GitHub Pages to rebuild and deploy your site.
-4.  **Perform a hard refresh** on your live GitHub Pages URL in your browser (Ctrl+Shift+R or Cmd+Shift+R) to ensure you're not seeing a cached version.
-5.  **Test again.** The `SyntaxError` should now be gone. If it is, your `getLocation` function should then be defined, and you can proceed to test the geolocation functionality.
-
-This `SyntaxError` was preventing the rest of your JavaScript from being parsed and executed correctly, which is why `getLocation` was appearing as undefined. Fixing this should resolve that primary iss
